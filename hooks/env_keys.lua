@@ -31,6 +31,9 @@ function PLUGIN:EnvKeys(ctx)
 
     if cwd and cwd ~= "" then
         local pipfile_path = cwd .. "/Pipfile"
+        -- mise caches this result, so name what it depends on: the Pipfile, the
+        -- lock `pipenv install` writes, and the virtualenv once found.
+        local watched = { pipfile_path, cwd .. "/Pipfile.lock" }
         local f = io.open(pipfile_path, "r")
         if f then
             f:close()
@@ -55,6 +58,7 @@ function PLUGIN:EnvKeys(ctx)
                     local test_file = io.open(venv_bin .. "/python", "r")
                     if test_file then
                         test_file:close()
+                        table.insert(watched, venv_path)
 
                         -- Add virtualenv activation
                         table.insert(result, {
@@ -72,6 +76,12 @@ function PLUGIN:EnvKeys(ctx)
                     end
                 end
             end
+        end
+
+        -- mise.cache is a mise addition; the vfox CLI and older mise lack it.
+        local ok, cache = pcall(require, "mise.cache")
+        if ok then
+            cache.watch_files(watched)
         end
     end
 
