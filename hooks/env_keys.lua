@@ -38,6 +38,25 @@ function PLUGIN:EnvKeys(ctx)
         if f then
             f:close()
 
+            -- `pipenv install` or `pipenv sync` can create the virtualenv without
+            -- changing the lock. It goes in the project's .venv, or in a directory
+            -- named after the project in WORKON_HOME, which gains an entry then.
+            table.insert(watched, cwd .. "/.venv")
+            local workon_home = os.getenv("WORKON_HOME")
+            if not workon_home or workon_home == "" then
+                local home = os.getenv("HOME") or os.getenv("USERPROFILE") or ""
+                if RUNTIME.osType == "windows" then
+                    workon_home = home .. "\\.virtualenvs"
+                else
+                    local data_home = os.getenv("XDG_DATA_HOME")
+                    if not data_home or data_home == "" then
+                        data_home = home .. "/.local/share"
+                    end
+                    workon_home = data_home .. "/virtualenvs"
+                end
+            end
+            table.insert(watched, workon_home)
+
             -- Pipfile exists, try to get the virtualenv path
             local pipenv_cmd = version_path
             if RUNTIME.osType == "windows" then
